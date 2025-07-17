@@ -1,12 +1,16 @@
 # config.py
 
-PROMPT = "A futuristic city skyline at dusk"
-FPS = 4
-DURATION = 8  # seconds
-RES_LOW = (512, 288)
+# path to Topaz CLI
+TOPAZ_CLI = "/path/to/topaz/video/cli"
+
+# model type (e.g., 'ar' for Artemis, 'gp' for Gaia, etc.)
+TOPAZ_MODEL = "ar"
+
+# resolution to upscale to (4K UHD)
 RES_HIGH = (3840, 2160)
-SD_MODEL = "stabilityai/stable-video-diffusion-img2vid-xt"
-DROPBOX_TOKEN = "YOUR_DROPBOX_ACCESS_TOKEN"
-TOPAZ_CLI = "topaz_video_ai"
-TOPAZ_MODEL = "proteus_v4"
-USE_TOPAZ = True  # Set to False to skip Topaz AI upscaling
+
+# Dropbox access token
+DROPBOX_TOKEN = "your_dropbox_token"
+
+# SVD model (e.g., "stabilityai/stable-video-diffusion-img2vid")
+SVD_MODEL_PATH = "stabilityai/stable-video-diffusion-img2vid"
