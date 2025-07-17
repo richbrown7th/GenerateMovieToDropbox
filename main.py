@@ -1,10 +1,10 @@
-import os, tempfile, subprocess, argparse, dropbox, time
+import os, tempfile, subprocess, argparse, dropbox, time, multiprocessing
 from PIL import Image
 import torch
 from diffusers import StableDiffusionPipeline, StableVideoDiffusionPipeline
 from config import *
 
-# GitHub Actions runs on CPU — use float32 and CPU
+# GitHub Actions uses CPU only
 DEVICE = "cpu"
 DTYPE = torch.float32
 
@@ -21,23 +21,48 @@ video_pipe = StableVideoDiffusionPipeline.from_pretrained(
 )
 video_pipe.to(DEVICE)
 
+def run_pipe(output_dict, image):
+    try:
+        result = video_pipe(
+            image=image,
+            num_frames=4,               # Reduced for CPU stability
+            num_inference_steps=10,     # Reduced for speed
+            generator=torch.manual_seed(42)
+        )
+        output_dict["result"] = result
+    except Exception as e:
+        output_dict["error"] = str(e)
+
+def safe_generate_video(image):
+    print("[INFO] Starting video generation subprocess...")
+    manager = multiprocessing.Manager()
+    output_dict = manager.dict()
+    p = multiprocessing.Process(target=run_pipe, args=(output_dict, image))
+    p.start()
+    p.join(timeout=300)  # ⏱️ 5-minute timeout
+
+    if p.is_alive():
+        print("[ERROR] Video generation timed out.")
+        p.terminate()
+        raise RuntimeError("Video generation timed out")
+
+    if "error" in output_dict:
+        raise RuntimeError(output_dict["error"])
+
+    return output_dict["result"]
+
 def generate_video(prompt, output_dir):
     print(f"[INFO] Generating image from prompt: {prompt}")
     start = time.time()
     image = text2img_pipe(prompt=prompt, guidance_scale=7.5, num_inference_steps=30).images[0]
     print(f"[INFO] Image generated in {time.time() - start:.1f}s")
 
-    # Resize for SVD compatibility (StableVideoDiffusion img2vid wants ~576x320)
+    # Resize for StableVideoDiffusion compatibility
     image = image.resize((576, 320))
 
-    print("[INFO] Generating 8 frames of video from image...")
+    print("[INFO] Generating video frames from image...")
     start = time.time()
-    output = video_pipe(
-        image=image,
-        num_frames=8,  # Reduce for CI speed/stability
-        num_inference_steps=15,
-        generator=torch.manual_seed(42)
-    )
+    output = safe_generate_video(image)
     print(f"[INFO] Video generated in {time.time() - start:.1f}s")
 
     video_path = os.path.join(output_dir, "output.mp4")
