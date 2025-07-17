@@ -17,7 +17,7 @@ def generate_video(prompt, tmpdir):
     #pipe.enable_model_cpu_offload()
     num_frames = FPS * DURATION
     print(f"[INFO] Generating {num_frames} frames...")
-    output = pipe(prompt=text, num_inference_steps=20, num_frames=num_frames)
+    output = pipe(text=prompt, num_inference_steps=20, num_frames=num_frames)
     low_vid = os.path.join(tmpdir, "lowres.mp4")
     writer = cv2.VideoWriter(low_vid, cv2.VideoWriter_fourcc(*"mp4v"), FPS, RES_LOW)
     for frame in output.frames:
