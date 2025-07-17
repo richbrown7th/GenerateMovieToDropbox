@@ -14,7 +14,7 @@ def generate_video(prompt, tmpdir):
         SD_MODEL, torch_dtype=dtype
     ).to(device)
     
-    pipe.enable_model_cpu_offload()
+    #pipe.enable_model_cpu_offload()
     num_frames = FPS * DURATION
     print(f"[INFO] Generating {num_frames} frames...")
     output = pipe(prompt=prompt, num_inference_steps=20, num_frames=num_frames)
