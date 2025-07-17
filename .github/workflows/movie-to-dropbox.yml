@@ -1,0 +1,34 @@
+name: Generate Video to Dropbox
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Prompt for video generation"
+        required: true
+      use_topaz:
+        description: "Use Topaz AI (true/false)"
+        required: false
+        default: "true"
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 🚀 Generate and Upload Video
+        env:
+          DROPBOX_TOKEN: ${{ secrets.DROPBOX_TOKEN }}
+        run: |
+          python main.py --prompt "${{ github.event.inputs.prompt }}" --use_topaz "${{ github.event.inputs.use_topaz }}"
