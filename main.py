@@ -4,9 +4,16 @@ from diffusers import StableVideoDiffusionPipeline
 from config import *
 
 def generate_video(prompt, tmpdir):
+    
+    import torch
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = torch.float16 if device == "cuda" else torch.float32
+
     pipe = StableVideoDiffusionPipeline.from_pretrained(
-        SD_MODEL, torch_dtype=torch.float16
-    ).to("cuda")
+        SD_MODEL, torch_dtype=dtype
+    ).to(device)
+    
     pipe.enable_model_cpu_offload()
     num_frames = FPS * DURATION
     print(f"[INFO] Generating {num_frames} frames...")
