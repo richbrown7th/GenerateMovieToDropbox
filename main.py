@@ -1,32 +1,33 @@
 import os, tempfile, subprocess, argparse, dropbox, torch, cv2
+import torch
 from tqdm import tqdm
 from diffusers import StableVideoDiffusionPipeline
 from config import *
 
 def generate_video(prompt, tmpdir):
     
-    import torch
+    from PIL import Image
+import torch
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.float16 if device == "cuda" else torch.float32
+def generate_video(prompt, output_dir):
+    print("[INFO] Generating 32 frames...")
 
-    pipe = StableVideoDiffusionPipeline.from_pretrained(
-        SD_MODEL, torch_dtype=dtype
-    ).to(device)
+    # Instead of using a prompt directly, we need an input image
+    # Here's a placeholder for now — you can replace this with an actual image generator
+    input_image = Image.new("RGB", (512, 512), color=(255, 100, 50))  # orange placeholder
+
+    output = pipe(
+        image=input_image,
+        num_frames=32,
+        num_inference_steps=25,
+        generator=torch.manual_seed(42)
+    )
+
+    video_path = f"{output_dir}/output.mp4"
+    output.frames[0].save(video_path, save_all=True, append_images=output.frames[1:], duration=50, loop=0)
+    return video_path
+
     
-    #pipe.enable_model_cpu_offload()
-    num_frames = FPS * DURATION
-    print(f"[INFO] Generating {num_frames} frames...")
-    output = pipe(text=prompt, num_inference_steps=20, num_frames=num_frames)
-    low_vid = os.path.join(tmpdir, "lowres.mp4")
-    writer = cv2.VideoWriter(low_vid, cv2.VideoWriter_fourcc(*"mp4v"), FPS, RES_LOW)
-    for frame in output.frames:
-        img = cv2.cvtColor(frame.numpy(), cv2.COLOR_RGB2BGR)
-        img = cv2.resize(img, RES_LOW)
-        writer.write(img)
-    writer.release()
-    return low_vid
-
 def upscale_with_topaz(input_vid, tmpdir):
     high_vid = os.path.join(tmpdir, "4k_upscaled.mp4")
     cmd = [
