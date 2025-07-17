@@ -1,7 +1,8 @@
+torch>=2.1.0
+transformers>=4.40.0
+diffusers>=0.27.0
+accelerate>=0.29.0
+xformers>=0.0.23
 dropbox
-diffusers[torch]
-transformers
-accelerate
-torch
 opencv-python
-tqdm
+Pillow
