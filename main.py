@@ -1,33 +1,38 @@
-import os, tempfile, subprocess, argparse, dropbox, torch, cv2
+import os, tempfile, subprocess, argparse, dropbox
+from PIL import Image
 import torch
-from tqdm import tqdm
-from diffusers import StableVideoDiffusionPipeline
+from diffusers import StableDiffusionPipeline, StableVideoDiffusionPipeline
 from config import *
 
-def generate_video(prompt, tmpdir):
-    
-    from PIL import Image
-import torch
+# Load pipelines once
+text2img_pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16)
+text2img_pipe.to("cuda" if torch.cuda.is_available() else "cpu")
+
+video_pipe = StableVideoDiffusionPipeline.from_pretrained(SVD_MODEL_PATH, torch_dtype=torch.float16)
+video_pipe.to("cuda" if torch.cuda.is_available() else "cpu")
 
 def generate_video(prompt, output_dir):
-    print("[INFO] Generating 32 frames...")
+    print(f"[INFO] Generating image from prompt: {prompt}")
 
-    # Instead of using a prompt directly, we need an input image
-    # Here's a placeholder for now — you can replace this with an actual image generator
-    input_image = Image.new("RGB", (512, 512), color=(255, 100, 50))  # orange placeholder
+    # Step 1: Prompt → Image
+    image = text2img_pipe(prompt=prompt, guidance_scale=7.5, num_inference_steps=30).images[0]
+    image_path = os.path.join(output_dir, "input_image.png")
+    image.save(image_path)
 
-    output = pipe(
-        image=input_image,
+    print("[INFO] Generating 32 frames of video from image...")
+
+    # Step 2: Image → Video
+    output = video_pipe(
+        image=image,
         num_frames=32,
         num_inference_steps=25,
         generator=torch.manual_seed(42)
     )
 
-    video_path = f"{output_dir}/output.mp4"
+    video_path = os.path.join(output_dir, "output.mp4")
     output.frames[0].save(video_path, save_all=True, append_images=output.frames[1:], duration=50, loop=0)
     return video_path
 
-    
 def upscale_with_topaz(input_vid, tmpdir):
     high_vid = os.path.join(tmpdir, "4k_upscaled.mp4")
     cmd = [
