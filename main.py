@@ -1,33 +1,44 @@
-import os, tempfile, subprocess, argparse, dropbox
+import os, tempfile, subprocess, argparse, dropbox, time
 from PIL import Image
 import torch
 from diffusers import StableDiffusionPipeline, StableVideoDiffusionPipeline
 from config import *
 
-# Load pipelines once
-text2img_pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16)
-text2img_pipe.to("cuda" if torch.cuda.is_available() else "cpu")
+# GitHub Actions runs on CPU — use float32 and CPU
+DEVICE = "cpu"
+DTYPE = torch.float32
 
-video_pipe = StableVideoDiffusionPipeline.from_pretrained(SVD_MODEL_PATH, torch_dtype=torch.float16)
-video_pipe.to("cuda" if torch.cuda.is_available() else "cpu")
+# Load pipelines once
+text2img_pipe = StableDiffusionPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    torch_dtype=DTYPE
+)
+text2img_pipe.to(DEVICE)
+
+video_pipe = StableVideoDiffusionPipeline.from_pretrained(
+    SVD_MODEL_PATH,
+    torch_dtype=DTYPE
+)
+video_pipe.to(DEVICE)
 
 def generate_video(prompt, output_dir):
     print(f"[INFO] Generating image from prompt: {prompt}")
-
-    # Step 1: Prompt → Image
+    start = time.time()
     image = text2img_pipe(prompt=prompt, guidance_scale=7.5, num_inference_steps=30).images[0]
-    image_path = os.path.join(output_dir, "input_image.png")
-    image.save(image_path)
+    print(f"[INFO] Image generated in {time.time() - start:.1f}s")
 
-    print("[INFO] Generating 32 frames of video from image...")
+    # Resize for SVD compatibility (StableVideoDiffusion img2vid wants ~576x320)
+    image = image.resize((576, 320))
 
-    # Step 2: Image → Video
+    print("[INFO] Generating 8 frames of video from image...")
+    start = time.time()
     output = video_pipe(
         image=image,
-        num_frames=32,
-        num_inference_steps=25,
+        num_frames=8,  # Reduce for CI speed/stability
+        num_inference_steps=15,
         generator=torch.manual_seed(42)
     )
+    print(f"[INFO] Video generated in {time.time() - start:.1f}s")
 
     video_path = os.path.join(output_dir, "output.mp4")
     output.frames[0].save(video_path, save_all=True, append_images=output.frames[1:], duration=50, loop=0)
