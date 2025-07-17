@@ -1,5 +1,6 @@
 dropbox
 diffusers[torch]
+transformers
 accelerate
 torch
 opencv-python
