@@ -1,0 +1,6 @@
+dropbox
+diffusers[torch]
+accelerate
+torch
+opencv-python
+tqdm
